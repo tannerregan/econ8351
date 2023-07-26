@@ -11,11 +11,24 @@ global myyellow "255 193 7"
 global mygreen "16 185 156"
 
 
-*Data from: https://ourworldindata.org/grapher/gdp-per-capita-penn-world-table
+*Data from: https://ourworldindata.org/population-growth#explore-data-poverty
+import delimited "C:\Users\tanner_regan\Downloads\population-and-demography.csv", clear
+keep countryname year population
+keep if year>=1960 & year<=2019
+gen pop2019=population if year==2019
+gen pop1960=population if year==1960
+collapse (mean) population pop2019 pop1960, by(countryname)
+rename countryname entity
+save "temp/population_counts.dta", replace
 
+*Data from: https://ourworldindata.org/grapher/gdp-per-capita-penn-world-table
 import delimited "C:\Users\tanner_regan\Downloads\gdp-per-capita-penn-world-table.csv", clear
 rename gdppercapitaoutputmultiplepriceb GPDpc
 reshape wide GPDpc, i(code entity) j(year)
+
+*merge with population
+merge 1:1 entity using "temp/population_counts.dta"
+drop _merge
 
 *USE 1960 onwards because data availablility is better
 keep if missing(GPDpc1960)==0 & missing(GPDpc2019)==0
@@ -56,7 +69,7 @@ twoway ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
 	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
 	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
-	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') x + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
 graph export "graphs/convergence1960_2019.png", replace
 drop growth_hat
 
@@ -78,7 +91,7 @@ twoway ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
 	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
 	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
-	legend(order(2 "OECD" 1 "y = `b1'(`se1') x + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+	legend(order(2 "OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
 graph export "graphs/convergence1960_2019oecd.png", replace
 drop growth_hat
 
@@ -102,7 +115,7 @@ twoway ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
 	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
 	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
-	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') x + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
 graph export "graphs/convergence1960_2011.png", replace
 drop growth_hat
 
@@ -124,7 +137,54 @@ twoway ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
 	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
 	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
-	legend(order(2 "OECD" 1 "y = `b1'(`se1') x + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+	legend(order(2 "OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
 graph export "graphs/convergence1960_2011oecd.png", replace
 drop growth_hat
 
+
+*ALL countries (weight by average population)
+reg growth2019_1960 GDPpc1960relusa [aw=population]
+predict growth_hat
+local b0=_b[_cons]
+local b0: di %2.0f `b0'
+local b1=_b[GDPpc1960relusa]
+local b1: di %3.2f `b1'
+local se1=_se[GDPpc1960relusa]
+local se1: di %3.2f `se1'
+	
+twoway ///
+	(line growth_hat GDPpc1960relusa, lcolor(black) sort lpattern(solid) lwidth(thin)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [aw=population], mcolor("$myred") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [aw=population], mcolor("$myblue") msymbol(oh) msize(medium)) ///
+	if entity!="Venezuela" /// //drop venezuala just because it is a huge negative growth outlier and skews the axis
+	, yline(0, lcolor(gray)) ytitle("Avg. growth per annum (1960-2019)") xtitle("GDP per capita 1960 (relative to USA)") ///
+	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
+	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
+	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
+	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+graph export "graphs/convergence1960_2019popwt.png", replace
+drop growth_hat
+
+
+*ALL countries (weight by today population)
+reg growth2019_1960 GDPpc1960relusa [aw=pop2019]
+predict growth_hat
+local b0=_b[_cons]
+local b0: di %2.0f `b0'
+local b1=_b[GDPpc1960relusa]
+local b1: di %3.2f `b1'
+local se1=_se[GDPpc1960relusa]
+local se1: di %3.2f `se1'
+	
+twoway ///
+	(line growth_hat GDPpc1960relusa, lcolor(black) sort lpattern(solid) lwidth(thin)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [aw=pop2019], mcolor("$myred") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [aw=pop2019], mcolor("$myblue") msymbol(oh) msize(medium)) ///
+	if entity!="Venezuela" /// //drop venezuala just because it is a huge negative growth outlier and skews the axis
+	, yline(0, lcolor(gray)) ytitle("Avg. growth per annum (1960-2019)") xtitle("GDP per capita 1960 (relative to USA)") ///
+	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
+	xlab(-3.4657359 "1/32" -2.7725887 "1/16" -2.0794415 "1/8" -1.3862944 "1/4" -.69314718 "1/2" 0 "1") ///
+	ylab(-2.5 "-2.5%" 0 "0%" 2.5 "2.5%" 5 "5%" 7.5 "7.5%") ///
+	legend(order(2 "OECD" 3 "non-OECD" 1 "y = `b1'(`se1') lnx + `b0'") pos(2) ring(0) col(1) region(lcolor(black)))
+graph export "graphs/convergence1960_2019popwt2019.png", replace
+drop growth_hat
