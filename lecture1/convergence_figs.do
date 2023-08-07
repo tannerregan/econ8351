@@ -143,7 +143,7 @@ drop growth_hat
 
 
 *ALL countries (weight by average population)
-reg growth2019_1960 GDPpc1960relusa [aw=population]
+reg growth2019_1960 GDPpc1960relusa [w=population]
 predict growth_hat
 local b0=_b[_cons]
 local b0: di %2.0f `b0'
@@ -154,8 +154,8 @@ local se1: di %3.2f `se1'
 	
 twoway ///
 	(line growth_hat GDPpc1960relusa, lcolor(black) sort lpattern(solid) lwidth(thin)) ///
-	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [aw=population], mcolor("$myred") msymbol(oh) msize(medium)) ///
-	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [aw=population], mcolor("$myblue") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [w=population], mcolor("$myred") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [w=population], mcolor("$myblue") msymbol(oh) msize(medium)) ///
 	if entity!="Venezuela" /// //drop venezuala just because it is a huge negative growth outlier and skews the axis
 	, yline(0, lcolor(gray)) ytitle("Avg. growth per annum (1960-2019)") xtitle("GDP per capita 1960 (relative to USA)") ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
@@ -167,7 +167,7 @@ drop growth_hat
 
 
 *ALL countries (weight by today population)
-reg growth2019_1960 GDPpc1960relusa [aw=pop2019]
+reg growth2019_1960 GDPpc1960relusa [w=pop2019]
 predict growth_hat
 local b0=_b[_cons]
 local b0: di %2.0f `b0'
@@ -178,8 +178,8 @@ local se1: di %3.2f `se1'
 	
 twoway ///
 	(line growth_hat GDPpc1960relusa, lcolor(black) sort lpattern(solid) lwidth(thin)) ///
-	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [aw=pop2019], mcolor("$myred") msymbol(oh) msize(medium)) ///
-	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [aw=pop2019], mcolor("$myblue") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==1 [w=pop2019], mcolor("$myred") msymbol(oh) msize(medium)) ///
+	(scatter growth2019_1960 GDPpc1960relusa if oecd==0 [w=pop2019], mcolor("$myblue") msymbol(oh) msize(medium)) ///
 	if entity!="Venezuela" /// //drop venezuala just because it is a huge negative growth outlier and skews the axis
 	, yline(0, lcolor(gray)) ytitle("Avg. growth per annum (1960-2019)") xtitle("GDP per capita 1960 (relative to USA)") ///
 	xscale(range(-3.615506 .197651)) yscale(range(-0.025 0.07)) ///
